@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kartu Ucapan for you</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --soft: #f8fafc;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto;
+      color: var(--soft);
+      background: radial-gradient(circle at 10% 10%, #07102a 0%, #08102e 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .wrapper {
+      text-align: center;
+      position: relative;
+    }
+    .cake {
+      width: 220px;
+      height: 160px;
+      position: relative;
+      margin: 0 auto;
+    }
+    .base {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 0;
+      width: 200px;
+      height: 90px;
+      background: linear-gradient(180deg, #d96b6b, #b84b4b);
+      border-radius: 10px;
+    }
+    .frost {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 60px;
+      width: 220px;
+      height: 44px;
+      background: linear-gradient(180deg, #fff6f6, #ffdede);
+      border-radius: 16px;
+    }
+    .candle {
+      position: absolute;
+      width: 8px;
+      height: 38px;
+      background: #fff6b3;
+      border-radius: 4px;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 94px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      cursor: pointer;
+    }
+    .flame {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%) translateY(-6px);
+      bottom: 126px;
+      width: 14px;
+      height: 22px;
+      border-radius: 50% 50% 45% 45%;
+      background: radial-gradient(circle at 40% 30%, #fff6b0 0%, #ffb84d 45%, #ff6b2b 80%);
+      filter: drop-shadow(0 0 10px rgba(255, 200, 80, 0.6));
+      animation: flicker 0.2s infinite alternate;
+      transition: opacity 1s ease;
+    }
+    @keyframes flicker {
+      0% { transform: translateX(-50%) translateY(-6px) scale(1); opacity: 0.9; }
+      100% { transform: translateX(-50%) translateY(-8px) scale(1.1); opacity: 1; }
+    }
+    small {
+      display: block;
+      margin-top: 20px;
+      font-size: 15px;
+      animation: blink 1s infinite;
+      color: #ffb6b6;
+    }
+    @keyframes blink {
+      50% { opacity: 0.5; }
+    }
+
+    #confetti, #flowers {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .message, .wish-text, .explode {
+      position: fixed;
+      top: 25%; /* sebelumnya 50% */
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      text-shadow: 0 0 15px rgba(255,255,255,0.8);
+      z-index: 20;
+    }
+
+    .message {
+      font-size: 2.2rem;
+      font-weight: 700;
+      opacity: 0;
+      transition: opacity 2s ease;
+    }
+
+    .wish-text {
+      font-size: 1.5rem;
+      opacity: 0;
+      transition: opacity 2s ease;
+    }
+
+    .wish-input {
+      position: fixed;
+      top: 35%; /* dinaikkan */
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.2rem;
+      padding: 10px 16px;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      text-align: center;
+      transition: opacity 1s ease;
+      opacity: 0;
+    }
+
+    .explode {
+      font-weight: 600;
+      font-size: 1.8rem;
+      opacity: 0;
+      transition: opacity 1s ease;
+      text-shadow: 0 0 20px rgba(255,255,255,0.9);
+      z-index: 30;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="cake" id="cake">
+      <div class="frost"></div>
+      <div class="candle" id="candle"></div>
+      <div class="base"></div>
+      <div class="flame" id="flame"></div>
+    </div>
+    <small id="hint">✨ Klik lilin 🎉 ✨</small>
+
+    <canvas id="confetti"></canvas>
+    <canvas id="flowers"></canvas>
+    <div class="message" id="message"></div>
+    <div class="wish-text" id="wishText">Tulis harapanmu 💭</div>
+    <input type="text" id="wishInput" class="wish-input" placeholder="Ketik harapan lalu enter" />
+    <div id="explodeText" class="explode">Semogaa terkabul yaaa ✨</div>
+  </div>
+
+  <script>
+    // Ambil nama dari URL
+    const params = new URLSearchParams(window.location.search);
+    const nama = params.get("name") || "Sahabat";
+
+    const hint = document.getElementById("hint");
+    const candle = document.getElementById("candle");
+    const flame = document.getElementById("flame");
+    const message = document.getElementById("message");
+    const wishText = document.getElementById("wishText");
+    const wishInput = document.getElementById("wishInput");
+    const explodeText = document.getElementById("explodeText");
+
+    // Audio Happy Birthday (looping)
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AudioContext();
+    const masterGain = ctx.createGain();
+    masterGain.connect(ctx.destination);
+    masterGain.gain.value = 0.4;
+
+    const notes = {C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392.00,A4:440.00,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99};
+    const melody = [['G4',0.4],['G4',0.4],['A4',0.8],['G4',0.8],['C5',0.8],['B4',1.0],
+      ['G4',0.4],['G4',0.4],['A4',0.8],['G4',0.8],['D5',0.8],['C5',1.0],
+      ['G4',0.4],['G4',0.4],['G5',0.8],['E5',0.8],['C5',0.8],['B4',0.8],['A4',1.0],
+      ['F5',0.4],['F5',0.4],['E5',0.8],['C5',0.8],['D5',0.8],['C5',1.0]];
+
+    function playMelody(){
+      if(ctx.state==='suspended') ctx.resume();
+      let t=ctx.currentTime+0.1;
+      for(const[note,dur] of melody){
+        const osc=ctx.createOscillator(),gain=ctx.createGain();
+        osc.frequency.value=notes[note];
+        gain.gain.setValueAtTime(0,t);
+        gain.gain.linearRampToValueAtTime(0.8,t+0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001,t+dur);
+        osc.connect(gain).connect(masterGain);
+        osc.start(t); osc.stop(t+dur);
+        t+=dur;
+      }
+      // ulang lagu setelah selesai
+      setTimeout(playMelody, t*1000 - ctx.currentTime*1000);
+    }
+    playMelody();
+
+    // Canvas Setup
+    const confettiCanvas = document.getElementById('confetti');
+    const cctx = confettiCanvas.getContext('2d');
+    const flowersCanvas = document.getElementById('flowers');
+    const fctx = flowersCanvas.getContext('2d');
+
+    function resizeCanvas(){
+      confettiCanvas.width=window.innerWidth;
+      confettiCanvas.height=window.innerHeight;
+      flowersCanvas.width=window.innerWidth;
+      flowersCanvas.height=window.innerHeight;
+    }
+    window.addEventListener('resize',resizeCanvas);
+    resizeCanvas();
+
+    // Confetti
+    let confettiParticles=[];
+    function makeParticle(x,y){
+      const r=(a,b)=>Math.random()*(b-a)+a;
+      return{x,y,vx:r(-4,4),vy:r(-8,-2),rot:r(0,360),vr:r(-8,8),size:r(6,12),life:r(60,120),color:`hsl(${Math.floor(r(0,360))},80%,60%)`};
+    }
+    function startConfettiBurst(){
+      const {width,height}=confettiCanvas;
+      for(let i=0;i<120;i++)
+        confettiParticles.push(makeParticle(width/2,height/3));
+    }
+    function animateConfetti(){
+      cctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
+      for(let i=confettiParticles.length-1;i>=0;i--){
+        const p=confettiParticles[i];
+        p.vy+=0.18; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr*0.05; p.life--;
+        cctx.save();
+        cctx.translate(p.x,p.y);
+        cctx.rotate(p.rot*Math.PI/180);
+        cctx.fillStyle=p.color;
+        cctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*0.6);
+        cctx.restore();
+        if(p.y>confettiCanvas.height+50||p.life<=0) confettiParticles.splice(i,1);
+      }
+      requestAnimationFrame(animateConfetti);
+    }
+    animateConfetti();
+
+    // Flowers
+    let flowers=[];
+    function makeFlower(x,y){
+      const r=(a,b)=>Math.random()*(b-a)+a;
+      return{x,y,r:r(4,12),color:`hsl(${Math.floor(r(0,360))},100%,70%)`,life:r(40,80)};
+    }
+    function startFlowerBurst(){
+      for(let i=0;i<100;i++)
+        flowers.push(makeFlower(Math.random()*window.innerWidth,Math.random()*window.innerHeight));
+    }
+    function animateFlowers(){
+      fctx.clearRect(0,0,flowersCanvas.width,flowersCanvas.height);
+      for(let i=flowers.length-1;i>=0;i--){
+        const f=flowers[i];
+        f.life--;
+        fctx.beginPath();
+        fctx.fillStyle=f.color;
+        fctx.shadowBlur=20;
+        fctx.shadowColor=f.color;
+        fctx.arc(f.x,f.y,f.r,0,Math.PI*2);
+        fctx.fill();
+        if(f.life<=0) flowers.splice(i,1);
+      }
+      requestAnimationFrame(animateFlowers);
+    }
+    animateFlowers();
+
+    // Interaksi
+    let blown=false;
+    candle.addEventListener('click',()=>{
+      if(blown) return;
+      blown=true;
+      flame.style.opacity=0;
+      hint.style.display="none";
+      startConfettiBurst();
+      startFlowerBurst();
+      message.textContent=`Selamat Ulang Tahun, ${nama}! 🎉`;
+      setTimeout(()=>message.style.opacity=1,500);
+      setTimeout(()=>{
+        message.style.opacity=0;
+        setTimeout(()=>{
+          wishText.style.opacity=1;
+          wishInput.style.opacity=1;
+          wishInput.focus();
+        },1500);
+      },4000);
+    });
+
+    wishInput.addEventListener("keypress", e=>{
+      if(e.key==="Enter" && wishInput.value.trim()!==""){
+        const wish = document.createElement("div");
+        wish.textContent = wishInput.value;
+        wish.style.position="fixed";
+        wish.style.left="50%";
+        wish.style.top="35%";
+        wish.style.transform="translate(-50%, -50%)";
+        wish.style.color="white";
+        wish.style.fontWeight="600";
+        wish.style.textShadow="0 0 15px rgba(255,255,255,0.8)";
+        document.body.appendChild(wish);
+        wishInput.value="";
+        wishText.style.opacity=0;
+        wishInput.style.opacity=0;
+
+        let y=window.innerHeight*0.35;
+        const fly = setInterval(()=>{
+          y-=4;
+          wish.style.top=y+"px";
+          if(y<100){
+            clearInterval(fly);
+            document.body.removeChild(wish);
+            explodeText.style.opacity=1;
+            startConfettiBurst();
+            startFlowerBurst();
+          }
+        },20);
+      }
+    });
+  </script>
+</body>
+</html>
